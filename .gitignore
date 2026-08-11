@@ -36,11 +36,12 @@ Thumbs.db
 .ai_config.md
 
 # Project specific
-couplemid.jpg
 E--cctoken-hlxtool-hlx-web-py/
 Image_*.png
 项目*.txt
-*.txt
+使用说明.txt
+快速测试.txt
+测试说明.txt
 temp_*.txt
 line*.json
 chat_*.html
