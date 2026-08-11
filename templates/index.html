@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HuluXia 发帖工具</title>
+    <style>
+        :root {
+            --bg: rgba(255, 255, 255, 0.88);
+            --card: rgba(255, 255, 255, 0.93);
+            --text: #2c3e50;
+            --text2: #7f8c8d;
+            --accent: #5B6ABF;
+            --accent2: #4A56A8;
+            --danger: #E74C3C;
+            --success: #27AE60;
+            --warning: #F39C12;
+            --border: rgba(0,0,0,0.06);
+            --input-bg: rgba(245,245,250,0.8);
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                         "Microsoft YaHei", "Helvetica Neue", sans-serif;
+            min-height: 100vh;
+            background: url('/back/1778562504132.png') center/cover fixed;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background: rgba(255,255,255,0.45);
+            z-index: 0;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        .container {
+            position: relative; z-index: 1;
+            width: 100%; max-width: 540px;
+            animation: fadeIn .4s ease;
+        }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+        .card {
+            background: var(--card);
+            border-radius: 18px;
+            padding: 32px 28px;
+            box-shadow: 0 4px 32px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.06);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* ─── LOGIN ─── */
+        #loginPage .card { padding: 44px 36px; }
+        .logo { text-align:center; margin-bottom: 28px; }
+        .logo .icon { font-size: 48px; margin-bottom: 4px; }
+        .logo h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+        .logo p { font-size: 14px; color: var(--text2); margin-top: 6px; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block; font-size: 13px; font-weight: 600;
+            color: var(--text2); margin-bottom: 5px; letter-spacing: 0.3px;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="password"],
+        .form-group input[type="number"],
+        .form-group textarea,
+        .form-group select {
+            width: 100%; padding: 11px 14px;
+            font-size: 15px; border: 1.5px solid var(--border);
+            border-radius: 10px; background: var(--input-bg);
+            color: var(--text); outline: none; font-family: inherit;
+            transition: border-color .2s, box-shadow .2s, background .2s;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(91,106,191,0.1);
+            background: #fff;
+        }
+        .form-group textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+        .form-group select { cursor: pointer; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 12px 24px; font-size: 15px; font-weight: 600; color: #fff;
+            background: var(--accent); border: none; border-radius: 10px;
+            cursor: pointer; transition: all .2s; font-family: inherit;
+            letter-spacing: 0.3px;
+        }
+        .btn:hover { background: var(--accent2); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(91,106,191,0.3); }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+        .btn-block { width: 100%; }
+        .btn-sm { padding: 7px 14px; font-size: 13px; border-radius: 8px; }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover { background: #C0392B; box-shadow: 0 4px 12px rgba(231,76,60,0.3); }
+        .btn-success { background: var(--success); }
+        .btn-success:hover { background: #219A52; box-shadow: 0 4px 12px rgba(39,174,96,0.3); }
+        .btn-outline {
+            background: transparent; color: var(--accent);
+            border: 1.5px solid var(--accent);
+        }
+        .btn-outline:hover { background: rgba(91,106,191,0.06); box-shadow: none; transform: none; }
+
+        .error-msg { color: var(--danger); font-size: 13px; margin-top: 4px; min-height: 18px; }
+
+        .spinner {
+            display: inline-block; width: 16px; height: 16px;
+            border: 2.5px solid rgba(255,255,255,0.3);
+            border-top-color: #fff; border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── MAIN ─── */
+        #mainPage { display: none; }
+        #mainPage .card {
+            padding: 24px 22px;
+            max-height: 92vh; overflow-y: auto;
+        }
+
+        .user-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 14px; background: var(--input-bg);
+            border-radius: 10px; margin-bottom: 14px;
+            flex-wrap: wrap; gap: 8px;
+        }
+        .user-info { font-size: 14px; color: var(--text2); }
+        .user-info strong { color: var(--text); font-weight: 600; }
+
+        .section-title {
+            font-size: 13px; font-weight: 700; color: var(--text);
+            margin: 14px 0 8px; padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .section-title.clickable { cursor: pointer; user-select: none; }
+        .section-title.clickable:hover { color: var(--accent); }
+
+        .row { display: flex; gap: 10px; }
+        .row > * { flex: 1; min-width: 0; }
+
+        .radio-group { display: flex; gap: 18px; flex-wrap: wrap; margin: 4px 0; }
+        .radio-group label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 14px; cursor: pointer; padding: 4px 0;
+        }
+        .radio-group input[type="radio"] { accent-color: var(--accent); width: 16px; height: 16px; }
+
+        .toggle-row {
+            display: flex; gap: 0; margin-bottom: 16px;
+        }
+        .toggle-btn {
+            flex: 1; padding: 10px; font-size: 14px; font-weight: 600;
+            border: 1.5px solid var(--border); background: var(--input-bg);
+            cursor: pointer; text-align: center; color: var(--text2);
+            transition: all .2s;
+        }
+        .toggle-btn:first-child { border-radius: 10px 0 0 10px; }
+        .toggle-btn:last-child { border-radius: 0 10px 10px 0; }
+        .toggle-btn.active {
+            background: var(--accent); color: #fff; border-color: var(--accent);
+            z-index: 1;
+        }
+
+        .checkbox-label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 14px; cursor: pointer; padding: 8px 0;
+        }
+        .checkbox-label input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+        .log-box {
+            background: #1e1e2e; color: #cdd6f4;
+            border-radius: 10px; padding: 12px;
+            font-family: "SF Mono", "Cascadia Code", "Consolas", "Menlo", monospace;
+            font-size: 12px; line-height: 1.6;
+            max-height: 260px; overflow-y: auto;
+            white-space: pre-wrap; word-break: break-all;
+            margin-top: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .log-info { color: #89b4fa; }
+        .log-ok { color: #a6e3a1; }
+        .log-err { color: #f38ba8; }
+        .log-warn { color: #fab387; }
+
+        .progress-wrap { margin: 12px 0; display: none; }
+        .progress-bar {
+            width: 100%; height: 6px; background: rgba(0,0,0,0.06);
+            border-radius: 3px; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; background: linear-gradient(90deg, var(--accent), #8B9AE0);
+            border-radius: 3px; transition: width .4s ease;
+            width: 0%;
+        }
+        .progress-text {
+            font-size: 12px; color: var(--text2); margin-top: 4px; text-align: center;
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 2px; }
+
+        @media (max-width: 480px) {
+            .row { flex-direction: column; gap: 0; }
+            .card { padding: 18px 14px !important; border-radius: 14px !important; }
+            #loginPage .card { padding: 28px 20px !important; }
+        }
+
+        /* ─── FILE BROWSER MODAL ─── */
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 100;
+            background: rgba(0,0,0,0.4);
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(3px);
+            animation: fadeIn .2s ease;
+        }
+        .modal-card {
+            background: #fff; border-radius: 14px;
+            width: 90%; max-width: 620px; max-height: 80vh;
+            display: flex; flex-direction: column;
+            box-shadow: 0 12px 50px rgba(0,0,0,0.25);
+        }
+        .modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 18px; border-bottom: 1px solid var(--border);
+            font-weight: 700; font-size: 15px;
+        }
+        .modal-close {
+            background: none; border: none; font-size: 18px;
+            cursor: pointer; color: var(--text2); padding: 2px 6px;
+        }
+        .modal-close:hover { color: var(--danger); }
+        .modal-breadcrumb {
+            padding: 8px 14px; font-size: 12px; color: var(--text2);
+            background: var(--input-bg); border-bottom: 1px solid var(--border);
+            overflow-x: auto; white-space: nowrap;
+        }
+        .modal-breadcrumb span {
+            color: var(--accent); cursor: pointer; font-weight: 500;
+        }
+        .modal-breadcrumb span:hover { text-decoration: underline; }
+        .modal-breadcrumb .sep { color: var(--text2); margin: 0 4px; cursor: default; }
+        .modal-body {
+            flex: 1; overflow-y: auto; padding: 8px 12px;
+            min-height: 200px; max-height: 50vh;
+        }
+        .modal-footer {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 18px; border-top: 1px solid var(--border);
+        }
+        .browser-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 12px; border-radius: 8px; cursor: pointer;
+            font-size: 14px; transition: background .15s;
+        }
+        .browser-item:hover { background: rgba(91,106,191,0.08); }
+        .browser-item.dir { font-weight: 500; }
+        .browser-item.parent { color: var(--accent); font-weight: 600; }
+        .browser-item .icon { font-size: 18px; flex-shrink: 0; width: 22px; text-align: center; }
+        .browser-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .browser-item .meta { font-size: 11px; color: var(--text2); flex-shrink: 0; }
+        .browser-empty { text-align: center; padding: 24px; color: var(--text2); font-size: 13px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- ═══════════════ LOGIN PAGE ═══════════════ -->
+    <div id="loginPage">
+        <div class="card">
+            <div class="logo">
+                <div class="icon">🦊</div>
+                <h1>HuluXia · 发帖工具</h1>
+                <p>登录葫芦侠账号以继续</p>
+            </div>
+            <div class="form-group">
+                <label>账号</label>
+                <input type="text" id="loginAccount" placeholder="输入手机号/用户名" autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="loginPassword" placeholder="输入密码" autocomplete="current-password">
+            </div>
+            <div class="error-msg" id="loginError"></div>
+            <button class="btn btn-block" id="btnLogin" onclick="doLogin()" style="margin-top:6px;">
+                登 录
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════════ MAIN PAGE ═══════════════ -->
+    <div id="mainPage">
+        <div class="card">
+            <!-- User bar -->
+            <div class="user-bar">
+                <span class="user-info" id="userInfo"></span>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-sm btn-outline" onclick="doCheckIn()" id="btnCheckIn">📅 一键签到</button>
+                    <button class="btn btn-sm btn-outline" onclick="logout()">↩ 退出</button>
+                </div>
+            </div>
+
+            <!-- Mode toggle -->
+            <div class="toggle-row">
+                <div class="toggle-btn active" id="toggleTopic" onclick="switchMode('topic')">📝 发帖</div>
+                <div class="toggle-btn" id="toggleComment" onclick="switchMode('comment')">💬 评论</div>
+            </div>
+
+            <!-- Common fields -->
+            <div class="form-group">
+                <label>📁 图片目录路径</label>
+                <div style="display:flex;gap:8px;">
+                    <input type="text" id="imageDir" value="images" placeholder="如: images 或 D:\pics" style="flex:1;" onchange="onDirChanged()">
+                    <button class="btn btn-sm btn-outline" onclick="openBrowser()" title="浏览本地目录">📂 浏览</button>
+                    <button class="btn btn-sm btn-outline" onclick="listImages()">查看</button>
+                </div>
+                <div id="imageInfo" style="font-size:12px;color:var(--text2);margin-top:4px;"></div>
+            </div>
+
+            <div class="form-group">
+                <label>✍️ 签名（逗号分隔；发帖 2条/帖，评论 1条/评）</label>
+                <textarea id="signatures" placeholder="签名1, 签名2, 签名3, ..."></textarea>
+            </div>
+
+            <!-- Topic fields -->
+            <div id="topicFields">
+                <div class="row">
+                    <div class="form-group"><label>发帖数目</label><input type="number" id="postCount" value="5" min="1"></div>
+                    <div class="form-group"><label>每帖图片 (0-9)</label><input type="number" id="imagesPerPost" value="3" min="0" max="9"></div>
+                </div>
+                <div class="row">
+                    <div class="form-group">
+                        <label>📂 分类 <a href="#" onclick="refreshCategories();return false;" style="font-size:11px;color:var(--accent);">🔄刷新</a></label>
+                        <select id="catId" onchange="onCatChange()"><option value="57">加载中...</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>🏷 标签</label>
+                        <select id="tagId"><option value="0">请先选分类</option></select>
+                    </div>
+                </div>
+                <div class="form-group"><label>标题前缀</label><input type="text" id="titlePrefix" placeholder="【女头】"></div>
+                <div class="form-group">
+                    <label>发帖类型</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="topicType" value="0" checked> 普通帖</label>
+                        <label><input type="radio" name="topicType" value="1"> 图文混编</label>
+                        <label><input type="radio" name="topicType" value="2"> 情头</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comment fields -->
+            <div id="commentFields" style="display:none;">
+                <div class="form-group"><label>帖子ID (post_id)</label><input type="number" id="postId" value="55575364"></div>
+                <div class="row">
+                    <div class="form-group"><label>每评图片数</label><input type="number" id="cmtImagesPer" value="1" min="1" max="9"></div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="coupleMode"> 情头模式 (图片×2+中间图)
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced -->
+            <div class="section-title clickable" onclick="toggleAdvanced()">
+                ⚙️ 高级参数 ▾
+            </div>
+            <div id="advancedFields" style="display:none;">
+                <div class="row">
+                    <div class="form-group"><label>app_version</label><input type="text" id="appVersion" value="4.4.1.6"></div>
+                    <div class="form-group"><label>versioncode</label><input type="text" id="versionCode" value="440106"></div>
+                </div>
+                <div class="row">
+                    <div class="form-group"><label>login_api_version</label><input type="text" id="loginApiVer" value="4.1.8"></div>
+                    <div class="form-group"><label>topic_api_version</label><input type="text" id="topicApiVer" value="4.2.6"></div>
+                </div>
+                <div class="row">
+                    <div class="form-group"><label>mixed_topic_api</label><input type="text" id="mixedTopicApiVer" value="4.1.8"></div>
+                    <div class="form-group"><label>comment_api</label><input type="text" id="commentApiVer" value="4.1.8"></div>
+                </div>
+                <div class="row">
+                    <div class="form-group"><label>topic_delay (ms)</label><input type="number" id="topicDelayMs" value="60000"></div>
+                    <div class="form-group"><label>upload_delay (ms)</label><input type="number" id="uploadDelayMs" value="2000"></div>
+                </div>
+                <div class="form-group"><label>comment_delay (ms)</label><input type="number" id="commentDelayMs" value="10000"></div>
+            </div>
+
+            <!-- Actions -->
+            <div style="display:flex;gap:10px;margin-top:18px;">
+                <button class="btn btn-success" id="btnStart" onclick="startPosting()" style="flex:1;">▶ 开始执行</button>
+                <button class="btn btn-danger btn-sm" id="btnCancel" onclick="cancelPosting()" style="display:none;">⏹ 停止</button>
+            </div>
+
+            <!-- Progress & Log -->
+            <div class="progress-wrap" id="progressWrap">
+                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="progress-text" id="progressText"></div>
+            </div>
+            <div class="log-box" id="logBox" style="min-height:60px;"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ FILE BROWSER MODAL ═══════════════ -->
+    <div id="browserModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeBrowser()">
+        <div class="modal-card">
+            <div class="modal-header">
+                <span>📂 选择图片目录</span>
+                <button class="modal-close" onclick="closeBrowser()">✕</button>
+            </div>
+            <div class="modal-breadcrumb" id="browserBreadcrumb"></div>
+            <div class="modal-body" id="browserBody">
+                <div style="text-align:center;padding:40px;color:var(--text2);">加载中...</div>
+            </div>
+            <div class="modal-footer">
+                <span id="browserInfo" style="font-size:12px;color:var(--text2);"></span>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-sm btn-outline" onclick="closeBrowser()">取消</button>
+                    <button class="btn btn-sm btn-success" id="btnSelectDir" onclick="selectCurrentDir()">✅ 选择此目录</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ════════════════════════════════════
+// State
+// ════════════════════════════════════
+let mode = 'topic';
+let currentUser = null;
+let abortController = null;
+let logLines = [];
+const MAX_LOG = 500;
+
+// ════════════════════════════════════
+// Helpers
+// ════════════════════════════════════
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function addLog(msg, cls) {
+    logLines.push(`<span class="${cls||''}">${esc(msg)}</span>`);
+    if (logLines.length > MAX_LOG) logLines = logLines.slice(-MAX_LOG);
+    $('logBox').innerHTML = logLines.join('\n');
+    $('logBox').scrollTop = $('logBox').scrollHeight;
+}
+function clearLog() { logLines = []; $('logBox').innerHTML = ''; }
+
+// ════════════════════════════════════
+// Page switching
+// ════════════════════════════════════
+function showPage(name) {
+    $('loginPage').style.display = name === 'login' ? 'block' : 'none';
+    $('mainPage').style.display = name === 'main' ? 'block' : 'none';
+}
+
+function switchMode(m) {
+    mode = m;
+    $('toggleTopic').classList.toggle('active', m === 'topic');
+    $('toggleComment').classList.toggle('active', m === 'comment');
+    $('topicFields').style.display = m === 'topic' ? 'block' : 'none';
+    $('commentFields').style.display = m === 'comment' ? 'block' : 'none';
+}
+
+function toggleAdvanced() {
+    const el = $('advancedFields');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// ════════════════════════════════════
+// Login
+// ════════════════════════════════════
+async function doLogin() {
+    const account = $('loginAccount').value.trim();
+    const password = $('loginPassword').value.trim();
+    $('loginError').textContent = '';
+
+    if (!account || !password) {
+        $('loginError').textContent = '请输入账号和密码';
+        return;
+    }
+
+    const btn = $('btnLogin');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>登录中...';
+
+    try {
+        const r = await fetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({account, password})
+        });
+        const d = await r.json();
+        if (d.success) {
+            currentUser = {nick: d.nick, uid: d.uid, token: d.token};
+            showPage('main');
+            $('userInfo').innerHTML = `🦊 <strong>${esc(d.nick)}</strong> · UID ${d.uid}`;
+            loadPrefs();
+            listImages();
+            loadCategories();
+            clearLog();
+        } else {
+            $('loginError').textContent = d.msg || '登录失败';
+        }
+    } catch (e) {
+        $('loginError').textContent = '网络错误: ' + e.message;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '登 录';
+    }
+}
+
+// Enter key
+document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && $('loginPage').style.display !== 'none') doLogin();
+});
+
+function logout() {
+    currentUser = null;
+    showPage('login');
+    clearLog();
+    if (abortController) { abortController.abort(); abortController = null; }
+    resetUI();
+}
+
+// ════════════════════════════════════
+// Check-in
+// ════════════════════════════════════
+async function doCheckIn() {
+    const btn = $('btnCheckIn');
+    btn.disabled = true;
+    btn.textContent = '签到中...';
+    addLog('📅 开始签到...', 'log-info');
+    try {
+        const r = await fetch('/api/checkin', {method: 'POST'});
+        const d = await r.json();
+        addLog(d.msg, d.success ? 'log-ok' : 'log-err');
+    } catch (e) {
+        addLog('签到异常: ' + e.message, 'log-err');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '📅 一键签到';
+    }
+}
+
+// ════════════════════════════════════
+// Image listing
+// ════════════════════════════════════
+async function listImages() {
+    const dir = $('imageDir').value.trim() || 'images';
+    try {
+        const r = await fetch('/api/files/scan?path=' + encodeURIComponent(dir));
+        const d = await r.json();
+        if (d.valid) {
+            $('imageInfo').textContent = `📷 ${d.count} 张图片`;
+            $('imageInfo').style.color = d.count > 0 ? 'var(--success)' : 'var(--warning)';
+        } else {
+            $('imageInfo').textContent = '⚠ 目录不存在';
+            $('imageInfo').style.color = 'var(--danger)';
+        }
+    } catch (e) {
+        $('imageInfo').textContent = '⚠ 目录不可访问';
+        $('imageInfo').style.color = 'var(--danger)';
+    }
+}
+
+function onDirChanged() {
+    listImages();
+    savePrefs();
+}
+
+// ════════════════════════════════════
+// Categories & Tags
+// ════════════════════════════════════
+let allCategories = [];
+
+async function loadCategories() {
+    try {
+        const r = await fetch('/api/categories');
+        const d = await r.json();
+        allCategories = d.categories || [];
+        populateCatSelect();
+    } catch (e) {
+        console.error('加载分类失败', e);
+        $('catId').innerHTML = '<option value="57">加载失败，点刷新重试</option>';
+    }
+}
+
+function populateCatSelect() {
+    const sel = $('catId');
+    const curVal = sel.value;
+    sel.innerHTML = '';
+    for (const cat of allCategories) {
+        const opt = document.createElement('option');
+        opt.value = cat.id;
+        opt.textContent = cat.title + ' (ID:' + cat.id + ')';
+        sel.appendChild(opt);
+    }
+    // Restore previously selected value
+    if (allCategories.some(c => String(c.id) === curVal)) {
+        sel.value = curVal;
+    }
+    onCatChange();  // populate tags for current category
+}
+
+function onCatChange() {
+    const catId = $('catId').value;
+    const cat = allCategories.find(c => String(c.id) === catId);
+    const sel = $('tagId');
+    const curVal = sel.value;
+    sel.innerHTML = '';
+    if (cat && cat.tags && cat.tags.length > 0) {
+        for (const tag of cat.tags) {
+            const opt = document.createElement('option');
+            opt.value = tag.id;
+            opt.textContent = tag.name + ' (ID:' + tag.id + ')';
+            sel.appendChild(opt);
+        }
+        if (cat.tags.some(t => String(t.id) === curVal)) {
+            sel.value = curVal;
+        }
+    } else {
+        sel.innerHTML = '<option value="0">(无标签)</option>';
+    }
+    savePrefs();
+}
+
+async function refreshCategories() {
+    await fetch('/api/categories/refresh');
+    await loadCategories();
+}
+
+// ════════════════════════════════════
+// Directory Browser
+// ════════════════════════════════════
+let browserCurrentPath = '';
+
+async function openBrowser() {
+    $('browserModal').style.display = 'flex';
+    // Start from current input value or roots
+    const currentDir = $('imageDir').value.trim();
+    if (currentDir) {
+        await navigateTo(currentDir);
+    } else {
+        await navigateTo('');
+    }
+}
+
+function closeBrowser() {
+    $('browserModal').style.display = 'none';
+}
+
+async function navigateTo(path) {
+    browserCurrentPath = path;
+    $('browserBody').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);"><span class="spinner" style="border-color:rgba(0,0,0,0.15);border-top-color:var(--accent);"></span> 加载中...</div>';
+    $('browserInfo').textContent = '';
+
+    try {
+        const r = await fetch('/api/files/browse?path=' + encodeURIComponent(path));
+        if (!r.ok) {
+            $('browserBody').innerHTML = '<div class="browser-empty">目录不可访问</div>';
+            return;
+        }
+        const d = await r.json();
+        renderBrowser(d);
+    } catch (e) {
+        $('browserBody').innerHTML = '<div class="browser-empty">加载失败: ' + esc(e.message) + '</div>';
+    }
+}
+
+function renderBrowser(data) {
+    browserCurrentPath = data.path || '';
+
+    // Breadcrumb
+    let breadcrumb = '';
+    if (data.path) {
+        const parts = data.path.replace(/\\/g, '/').split('/').filter(p => p);
+        // Build cumulative paths for breadcrumb
+        let cumPath = '';
+        const cumParts = [];
+        for (const part of parts) {
+            if (cumPath === '' && /^[A-Za-z]:$/.test(part)) {
+                cumPath = part + '\\';
+                cumParts.push({name: part + '\\', path: cumPath});
+            } else {
+                cumPath = cumPath + part + '\\';
+                cumParts.push({name: part, path: cumPath});
+            }
+        }
+        breadcrumb = cumParts.map((p, i) =>
+            `<span onclick="navigateTo('${escAttr(p.path)}')">${esc(p.name)}</span>` +
+            (i < cumParts.length - 1 ? '<span class="sep">▸</span>' : '')
+        ).join('');
+    } else {
+        breadcrumb = '<span style="color:var(--text);">📀 驱动器列表</span>';
+    }
+    $('browserBreadcrumb').innerHTML = breadcrumb;
+
+    // Entries
+    let html = '';
+    if (data.entries && data.entries.length > 0) {
+        for (const entry of data.entries) {
+            if (entry.type === 'parent') {
+                html += `<div class="browser-item parent" onclick="navigateTo('${escAttr(entry.path)}')">
+                    <span class="icon">⬆</span>
+                    <span class="name">${esc(entry.name)}</span>
+                </div>`;
+            } else if (entry.type === 'dir') {
+                html += `<div class="browser-item dir" onclick="navigateTo('${escAttr(entry.path)}')">
+                    <span class="icon">📁</span>
+                    <span class="name">${esc(entry.name)}</span>
+                </div>`;
+            } else if (entry.type === 'image') {
+                const sizeStr = entry.size > 1024*1024
+                    ? (entry.size / 1024 / 1024).toFixed(1) + ' MB'
+                    : entry.size > 1024
+                        ? Math.round(entry.size / 1024) + ' KB'
+                        : entry.size + ' B';
+                html += `<div class="browser-item">
+                    <span class="icon">🖼</span>
+                    <span class="name">${esc(entry.name)}</span>
+                    <span class="meta">${sizeStr}</span>
+                </div>`;
+            }
+        }
+    } else {
+        html = '<div class="browser-empty">此目录为空（无子目录或图片）</div>';
+    }
+    $('browserBody').innerHTML = html;
+    $('browserBody').scrollTop = 0;
+
+    // Info
+    const imgCount = data.imageCount || 0;
+    $('browserInfo').textContent = imgCount > 0 ? `此目录含 ${imgCount} 张图片` : '';
+    $('btnSelectDir').style.display = data.path ? 'inline-flex' : 'none';
+}
+
+function selectCurrentDir() {
+    if (browserCurrentPath) {
+        $('imageDir').value = browserCurrentPath;
+        closeBrowser();
+        listImages();
+        savePrefs();
+    }
+}
+
+function escAttr(s) {
+    return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ════════════════════════════════════
+// Posting
+// ════════════════════════════════════
+async function startPosting() {
+    if (abortController) { addLog('已有任务在运行', 'log-warn'); return; }
+
+    clearLog();
+    $('progressWrap').style.display = 'block';
+    $('progressFill').style.width = '0%';
+    $('progressText').textContent = '准备中...';
+    $('btnStart').style.display = 'none';
+    $('btnCancel').style.display = 'inline-flex';
+    savePrefs();
+
+    const body = {
+        imageDir: $('imageDir').value.trim() || 'images',
+        signatures: $('signatures').value.trim(),
+        uploadDelayMs: parseInt($('uploadDelayMs').value) || 2000,
+        app_version: $('appVersion').value.trim() || '4.4.1.6',
+        versioncode: $('versionCode').value.trim() || '440106',
+        topic_api_version: $('topicApiVer').value.trim() || '4.2.6',
+        mixed_topic_api_version: $('mixedTopicApiVer').value.trim() || '4.1.8',
+    };
+
+    let endpoint;
+    if (mode === 'topic') {
+        endpoint = '/api/post/topics';
+        body.postCount = parseInt($('postCount').value) || 5;
+        body.imagesPerPost = parseInt($('imagesPerPost').value) || 3;
+        body.catId = parseInt($('catId').value) || 57;
+        body.tagId = parseInt($('tagId').value) || 0;
+        body.titlePrefix = $('titlePrefix').value.trim() || '';
+        body.topicMode = parseInt(document.querySelector('input[name="topicType"]:checked')?.value || '0');
+        body.topicDelayMs = parseInt($('topicDelayMs').value) || 60000;
+    } else {
+        endpoint = '/api/post/comments';
+        body.postId = parseInt($('postId').value) || 0;
+        body.imagesPerComment = parseInt($('cmtImagesPer').value) || 1;
+        body.coupleMode = $('coupleMode').checked;
+        body.commentDelayMs = parseInt($('commentDelayMs').value) || 10000;
+    }
+
+    addLog('>>> 开始执行 (' + (mode === 'topic' ? '发帖' : '评论') + '模式)...', 'log-info');
+
+    abortController = new AbortController();
+    try {
+        const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body),
+            signal: abortController.signal
+        });
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        let currentEvent = '';
+
+        while (true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, {stream: true});
+
+            // Parse SSE lines
+            let idx;
+            while ((idx = buf.indexOf('\n')) !== -1) {
+                const line = buf.substring(0, idx).trim();
+                buf = buf.substring(idx + 1);
+
+                if (line.startsWith('event:')) {
+                    currentEvent = line.substring(6).trim();
+                } else if (line.startsWith('data:')) {
+                    try {
+                        const payload = JSON.parse(line.substring(5).trim());
+                        processEvent(currentEvent, payload);
+                    } catch (e) { /* ignore parse errors */ }
+                }
+                // Empty lines = event boundary, reset
+                if (!line) currentEvent = '';
+            }
+        }
+    } catch (e) {
+        if (e.name !== 'AbortError') {
+            addLog('连接异常: ' + e.message, 'log-err');
+        }
+    }
+
+    abortController = null;
+    resetUI();
+}
+
+function processEvent(event, data) {
+    const msg = data.msg || '';
+    let cls = 'log-info';
+    if (/失败|异常|错误|error/i.test(msg)) cls = 'log-err';
+    else if (/✓|ok|成功|完成/i.test(msg)) cls = 'log-ok';
+    else if (/⚠|警告/i.test(msg)) cls = 'log-warn';
+
+    if (event === 'complete') {
+        addLog('=== ' + (msg || ('完成: ' + (data.success||0) + '/' + (data.total||0))) + ' ===', 'log-ok');
+        $('progressFill').style.width = '100%';
+    } else if (event === 'error') {
+        addLog('❌ 错误: ' + msg, 'log-err');
+    } else {
+        addLog(msg, cls);
+    }
+
+    // Progress: [N/M]
+    const m = msg.match(/\[(\d+)\/(\d+)\]/);
+    if (m) {
+        const cur = parseInt(m[1]), total = parseInt(m[2]);
+        $('progressFill').style.width = Math.min(100, (cur / total * 100)) + '%';
+        $('progressText').textContent = cur + ' / ' + total;
+    }
+}
+
+async function cancelPosting() {
+    try {
+        await fetch('/api/cancel', {method: 'POST'});
+    } catch (e) {}
+    if (abortController) {
+        abortController.abort();
+        abortController = null;
+    }
+    resetUI();
+    addLog('⏹ 已停止', 'log-warn');
+}
+
+function resetUI() {
+    $('btnStart').style.display = 'flex';
+    $('btnCancel').style.display = 'none';
+}
+
+// ════════════════════════════════════
+// Prefs (localStorage)
+// ════════════════════════════════════
+function savePrefs() {
+    const keys = ['loginAccount','loginPassword','imageDir','signatures','postCount','imagesPerPost','catId','tagId',
+        'titlePrefix','postId','cmtImagesPer','coupleMode','appVersion','versionCode',
+        'loginApiVer','topicApiVer','mixedTopicApiVer','commentApiVer',
+        'topicDelayMs','uploadDelayMs','commentDelayMs'];
+    const p = {};
+    keys.forEach(k => {
+        const el = document.getElementById(k);
+        if (el) p[k] = el.type === 'checkbox' ? el.checked : el.value;
+    });
+    const radio = document.querySelector('input[name="topicType"]:checked');
+    if (radio) p.topicType = radio.value;
+    localStorage.setItem('hlx_prefs2', JSON.stringify(p));
+}
+
+function loadPrefs() {
+    try {
+        const p = JSON.parse(localStorage.getItem('hlx_prefs2') || '{}');
+        Object.entries(p).forEach(([k, v]) => {
+            const el = document.getElementById(k);
+            if (el) {
+                if (el.type === 'checkbox') el.checked = v;
+                else el.value = v;
+            }
+        });
+        if (p.topicType) {
+            const radio = document.querySelector(`input[name="topicType"][value="${p.topicType}"]`);
+            if (radio) radio.checked = true;
+        }
+    } catch (e) {}
+}
+
+document.addEventListener('input', savePrefs);
+document.addEventListener('change', savePrefs);
+
+// ════════════════════════════════════
+// Init
+// ════════════════════════════════════
+showPage('login');
+loadPrefs();
+</script>
+</body>
+</html>

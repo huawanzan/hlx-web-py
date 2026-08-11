@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Flask
+instance/
+.webassets-cache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment
+.env
+.ai_config.md
+
+# Project specific
+couplemid.jpg
+E--cctoken-hlxtool-hlx-web-py/
+Image_*.png
+项目*.txt
+*.txt
+temp_*.txt
+line*.json
+chat_*.html
+found_*.html
+extracted_*.html
+original_*.html
+
+# Backup
+*.bak
