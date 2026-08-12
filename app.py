@@ -582,9 +582,17 @@ class CheckInManager:
             return 0
         success = 0
         for cat_id in category_ids:
-            resp = self._check_in(cat_id)
-            if resp and self._is_success(resp):
-                success += 1
+            try:
+                resp = self._check_in(cat_id)
+                if resp and self._is_success(resp):
+                    success += 1
+                    print(f"[签到] 板块 {cat_id} 签到成功")
+                elif resp:
+                    print(f"[签到] 板块 {cat_id} 签到失败: {resp.get('msg', 'unknown')}")
+            except Exception as e:
+                # 403等错误会被捕获，继续下一个板块
+                print(f"[签到] 板块 {cat_id} 异常: {e}")
+                continue
         return success
 
     def _fetch_category_ids(self) -> list:
