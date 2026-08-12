@@ -1004,6 +1004,8 @@ def api_login():
     try:
         session = bot.login(account, password)
         if session and session.get("status") == 1:
+            # 保存session到STATE，供签到等功能使用
+            STATE["current_session"] = session
             user = session.get("user", {})
             return jsonify({
                 "success": True,
