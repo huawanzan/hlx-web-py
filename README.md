@@ -51,7 +51,7 @@
 1. **克隆项目**
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/hlx-web-py.git
+git clone https://github.com/huawanzan/hlx-web-py.git
 cd hlx-web-py
 ```
 
@@ -219,8 +219,8 @@ A: 访问葫芦侠对应板块，从URL中查看板块编号。
 
 ## 📧 联系方式
 
-- 提交 Issue：[GitHub Issues](https://github.com/YOUR_USERNAME/hlx-web-py/issues)
-- 邮箱：your-email@example.com
+- 提交 Issue：[GitHub Issues](https://github.com/huawanzan/hlx-web-py/issues)
+- 邮箱：huawanzan@gmail.com
 
 ## 📜 开源协议
 
