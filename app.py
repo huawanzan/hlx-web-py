@@ -567,6 +567,268 @@ class TopicManager:
 
 
 # ═══════════════════════════════════════════
+# Give Score Manager (赠送葫芦/打赏)
+# ═══════════════════════════════════════════
+
+SIGN_TAGS_GIVE_SCORE = ["_key", "comment_id", "device_code", "score", "score_txt"]
+
+class GiveScoreManager:
+    def __init__(self, http_client: HttpClient, token: str, device_code: str):
+        self.http = http_client
+        self.token = token
+        self.device_code = device_code
+
+    def give_score(self, comment_id: str, score: int, score_txt: str = "") -> dict:
+        """赠送葫芦给指定评论
+
+        Args:
+            comment_id: 评论ID
+            score: 赠送数量
+            score_txt: 留言
+
+        Returns:
+            包含赠送结果的字典
+        """
+        print(f"[GIVE_SCORE] 评论ID={comment_id}, 数量={score}, 留言={score_txt}")
+
+        params = {
+            "platform": CONFIG["platform"],
+            "gkey": CONFIG["gkey"],
+            "app_version": CONFIG["app_version"],
+            "versioncode": CONFIG["versioncode"],
+            "market_id": CONFIG["market_id"],
+            "_key": self.token,
+            "device_code": self.device_code,
+            "phone_brand_type": CONFIG["phone_brand_type"],
+            "hlx_android_id": FIXED_HLX_ANDROID_ID,
+            "comment_id": str(comment_id),
+            "score": str(score),
+            "score_txt": score_txt or "赠送",
+        }
+
+        params["sign"] = sign(params, SIGN_TAGS_GIVE_SCORE)
+
+        try:
+            resp = self.http.get_api("/score/give", "4.1.8", params)
+
+            if resp and self._is_success(resp):
+                print(f"[GIVE_SCORE] 成功")
+                return {
+                    "success": True,
+                    "code": 200,
+                    "msg": "赠送成功"
+                }
+            else:
+                msg = resp.get("msg", "未知错误") if resp else "请求失败"
+                print(f"[GIVE_SCORE] 失败: {msg}")
+                return {
+                    "success": False,
+                    "code": resp.get("status", 0) if resp else 0,
+                    "msg": msg
+                }
+        except Exception as e:
+            print(f"[GIVE_SCORE] 异常: {e}")
+            return {
+                "success": False,
+                "code": 0,
+                "msg": str(e)
+            }
+
+    def give_score_batch(self, comment_id: str, total: int,
+                         per_score: int = 5, score_txt: str = "",
+                         delay_ms: int = 1000, log_callback=None) -> tuple:
+        """批量赠送葫芦
+
+        Args:
+            comment_id: 评论ID
+            total: 总共要赠送的数量
+            per_score: 每次赠送的数量
+            score_txt: 留言
+            delay_ms: 每次赠送之间的延迟（毫秒）
+            log_callback: 日志回调函数
+
+        Returns:
+            (成功赠送的总数, 目标总数)
+        """
+        times = (total + per_score - 1) // per_score  # 向上取整
+        sent = 0
+
+        for i in range(times):
+            current_score = min(per_score, total - sent)
+
+            if log_callback:
+                log_callback(f"正在赠送第 {i+1}/{times} 次，数量: {current_score}")
+
+            try:
+                resp = self.give_score(comment_id, current_score, score_txt)
+
+                if resp.get("success"):
+                    sent += current_score
+                    if log_callback:
+                        log_callback(f"✓ 第 {i+1} 次赠送成功")
+                else:
+                    if log_callback:
+                        log_callback(f"✗ 第 {i+1} 次失败: {resp.get('msg', '未知')}")
+                    break
+
+            except Exception as e:
+                if log_callback:
+                    log_callback(f"✗ 异常: {e}")
+                break
+
+            if i < times - 1:
+                time.sleep(delay_ms / 1000.0)
+
+        return sent, total
+
+    def _is_success(self, resp: dict) -> bool:
+        if resp.get("status") == 1:
+            return True
+        return not resp.get("msg")
+
+
+# ═══════════════════════════════════════════
+# Comment List Manager (获取评论列表)
+# ═══════════════════════════════════════════
+
+class CommentListManager:
+    def __init__(self, http_client: HttpClient, token: str, device_code: str):
+        self.http = http_client
+        self.token = token
+        self.device_code = device_code
+
+    def get_post_comments(self, post_id: str) -> dict:
+        """获取帖子的评论列表
+
+        Args:
+            post_id: 帖子ID
+
+        Returns:
+            包含评论列表的字典
+        """
+        print(f"[COMMENTS] 获取帖子 {post_id} 的评论列表")
+
+        params = {
+            "platform": CONFIG["platform"],
+            "gkey": CONFIG["gkey"],
+            "app_version": CONFIG["app_version"],
+            "versioncode": CONFIG["versioncode"],
+            "market_id": CONFIG["market_id"],
+            "_key": self.token,
+            "device_code": self.device_code,
+            "phone_brand_type": CONFIG["phone_brand_type"],
+            "hlx_android_id": FIXED_HLX_ANDROID_ID,
+            "post_id": str(post_id),
+        }
+
+        try:
+            resp = self.http.get_api("/post/detail", "4.1.8", params)
+
+            if resp and self._is_success(resp):
+                comments = resp.get("comments", [])
+                print(f"[COMMENTS] 成功获取 {len(comments)} 条评论")
+                return {
+                    "success": True,
+                    "code": 200,
+                    "comments": comments,
+                    "total": len(comments)
+                }
+            else:
+                msg = resp.get("msg", "未知错误") if resp else "请求失败"
+                print(f"[COMMENTS] 失败: {msg}")
+                return {
+                    "success": False,
+                    "code": resp.get("status", 0) if resp else 0,
+                    "msg": msg
+                }
+        except Exception as e:
+            print(f"[COMMENTS] 异常: {e}")
+            return {
+                "success": False,
+                "code": 0,
+                "msg": str(e)
+            }
+
+    def _is_success(self, resp: dict) -> bool:
+        if resp.get("status") == 1:
+            return True
+        return not resp.get("msg")
+
+
+# ═══════════════════════════════════════════
+# Favorites Manager (获取收藏帖子)
+# ═══════════════════════════════════════════
+
+class FavoritesManager:
+    def __init__(self, http_client: HttpClient, token: str, device_code: str):
+        self.http = http_client
+        self.token = token
+        self.device_code = device_code
+
+    def get_favorites(self, user_id: str, count: int = 20, start: int = 0) -> dict:
+        """获取用户收藏的帖子列表
+
+        Args:
+            user_id: 用户ID
+            count: 获取数量，默认20
+            start: 起始位置，默认0
+
+        Returns:
+            包含收藏帖子列表的字典
+        """
+        print(f"[FAVORITES] 获取用户 {user_id} 的收藏列表，数量: {count}, 起始: {start}")
+
+        params = {
+            "platform": CONFIG["platform"],
+            "gkey": CONFIG["gkey"],
+            "app_version": CONFIG["app_version"],
+            "versioncode": CONFIG["versioncode"],
+            "market_id": CONFIG["market_id"],
+            "_key": self.token,
+            "device_code": self.device_code,
+            "phone_brand_type": CONFIG["phone_brand_type"],
+            "hlx_android_id": FIXED_HLX_ANDROID_ID,
+            "uid": str(user_id),
+            "start": str(start),
+            "count": str(count),
+        }
+
+        try:
+            # 葫芦侠收藏列表 API 路径
+            resp = self.http.get_api("/favorite/list", "4.1.8", params)
+
+            if resp and self._is_success(resp):
+                favorites = resp.get("favorites", [])
+                print(f"[FAVORITES] 成功获取 {len(favorites)} 条收藏")
+                return {
+                    "success": True,
+                    "code": 200,
+                    "msg": favorites,
+                    "total": len(favorites)
+                }
+            else:
+                msg = resp.get("msg", "未知错误") if resp else "请求失败"
+                print(f"[FAVORITES] 失败: {msg}")
+                return {
+                    "success": False,
+                    "code": resp.get("status", 0) if resp else 0,
+                    "msg": msg
+                }
+        except Exception as e:
+            print(f"[FAVORITES] 异常: {e}")
+            return {
+                "success": False,
+                "code": 0,
+                "msg": str(e)
+            }
+
+    def _is_success(self, resp: dict) -> bool:
+        if resp.get("status") == 1:
+            return True
+        return not resp.get("msg")
+
+
+# ═══════════════════════════════════════════
 # Check-in Manager (mirrors CheckInManager.java)
 # ═══════════════════════════════════════════
 
@@ -682,6 +944,48 @@ class BotService:
         token = STATE["current_session"].get("_key", "") if STATE["current_session"] else ""
         cim = CheckInManager(self.http, token, FIXED_DEVICE_CODE)
         return cim.check_in_all()
+
+    def get_favorites(self, user_id: str, count: int = 20, start: int = 0) -> dict:
+        """获取用户收藏的帖子列表"""
+        session = STATE.get("current_session")
+        if not session or not session.get("_key"):
+            return {
+                "success": False,
+                "code": 401,
+                "msg": "未登录，请先登录"
+            }
+
+        token = session.get("_key", "")
+        fm = FavoritesManager(self.http, token, FIXED_DEVICE_CODE)
+        return fm.get_favorites(user_id, count, start)
+
+    def get_post_comments(self, post_id: str) -> dict:
+        """获取帖子的评论列表"""
+        session = STATE.get("current_session")
+        if not session or not session.get("_key"):
+            return {
+                "success": False,
+                "code": 401,
+                "msg": "未登录，请先登录"
+            }
+
+        token = session.get("_key", "")
+        clm = CommentListManager(self.http, token, FIXED_DEVICE_CODE)
+        return clm.get_post_comments(post_id)
+
+    def give_score_to_comment(self, comment_id: str, score: int, score_txt: str = "") -> dict:
+        """赠送葫芦给指定评论"""
+        session = STATE.get("current_session")
+        if not session or not session.get("_key"):
+            return {
+                "success": False,
+                "code": 401,
+                "msg": "未登录，请先登录"
+            }
+
+        token = session.get("_key", "")
+        gsm = GiveScoreManager(self.http, token, FIXED_DEVICE_CODE)
+        return gsm.give_score(comment_id, score, score_txt)
 
     def post_topics(self, signatures: list, post_count: int, topic_mode: int,
                      images_per_post: int, image_files: list,
@@ -984,6 +1288,10 @@ bot = BotService()
 def index():
     return render_template("index.html")
 
+@app.route("/favorites")
+def favorites_page():
+    return render_template("favorites.html")
+
 @app.route("/back/<path:filename>")
 def serve_back(filename):
     from flask import send_from_directory
@@ -1031,6 +1339,160 @@ def api_checkin():
         return jsonify({"success": True, "msg": f"签到成功 {count} 个板块", "count": count})
     except Exception as e:
         return jsonify({"success": False, "msg": f"签到失败: {e}"})
+
+
+# ─── Get Favorites ───
+
+@app.route("/api/favorites", methods=["GET"])
+def api_get_favorites():
+    """获取用户收藏的帖子列表"""
+    user_id = request.args.get("userid") or request.args.get("userId")
+    count = request.args.get("count", 20, type=int)
+    start = request.args.get("start", 0, type=int)
+
+    if not user_id:
+        return jsonify({
+            "success": False,
+            "code": 400,
+            "msg": "请提供用户ID"
+        }), 400
+
+    try:
+        result = bot.get_favorites(user_id, count, start)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "code": 500,
+            "msg": f"获取收藏列表失败: {e}"
+        }), 500
+
+
+# ─── Get Comments ───
+
+@app.route("/api/comments", methods=["GET"])
+def api_get_comments():
+    """获取帖子的评论列表"""
+    post_id = request.args.get("post_id") or request.args.get("postId")
+
+    if not post_id:
+        return jsonify({
+            "success": False,
+            "code": 400,
+            "msg": "请提供帖子ID"
+        }), 400
+
+    try:
+        result = bot.get_post_comments(post_id)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "code": 500,
+            "msg": f"获取评论列表失败: {e}"
+        }), 500
+
+
+# ─── Give Score (Single) ───
+
+@app.route("/api/give_score_single", methods=["POST"])
+def api_give_score_single():
+    """单次赠送葫芦"""
+    data = request.get_json(force=True, silent=True) or {}
+    comment_id = data.get("comment_id") or data.get("commentId")
+    score = _parse_int(data, "score", 0)
+    score_txt = _parse_str(data, "score_txt", "赠送")
+
+    if not comment_id or score <= 0:
+        return jsonify({
+            "success": False,
+            "code": 400,
+            "msg": "参数错误"
+        }), 400
+
+    try:
+        result = bot.give_score_to_comment(comment_id, score, score_txt)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "code": 500,
+            "msg": f"赠送失败: {e}"
+        }), 500
+
+
+# ─── Give Score (Batch with SSE) ───
+
+@app.route("/api/give_score_batch", methods=["POST"])
+def api_give_score_batch():
+    """批量赠送葫芦（SSE流式响应）"""
+    if STATE["running"]:
+        return Response(
+            "event: error\ndata: {\"msg\":\"已有任务在运行\"}\n\n",
+            mimetype="text/event-stream"
+        )
+
+    STATE["running"] = True
+    data = request.get_json(force=True, silent=True) or {}
+
+    comment_id = data.get("comment_id") or data.get("commentId")
+    total = _parse_int(data, "total", 0)
+    per_score = _parse_int(data, "per_score", 5)
+    score_txt = _parse_str(data, "score_txt", "赠送")
+    delay_ms = _parse_int(data, "delay_ms", 1000)
+
+    if not comment_id or total <= 0:
+        STATE["running"] = False
+        return Response(
+            "event: error\ndata: {\"msg\":\"参数错误\"}\n\n",
+            mimetype="text/event-stream"
+        )
+
+    import queue
+    log_queue = queue.Queue()
+
+    def run_thread():
+        try:
+            session = STATE.get("current_session")
+            if not session or not session.get("_key"):
+                log_queue.put(("error", {"msg": "未登录"}))
+                return
+
+            token = session.get("_key", "")
+            gsm = GiveScoreManager(bot.http, token, FIXED_DEVICE_CODE)
+
+            def log_cb(msg):
+                log_queue.put(("log", {"msg": msg}))
+
+            sent, total_target = gsm.give_score_batch(
+                comment_id, total, per_score, score_txt, delay_ms, log_cb
+            )
+
+            log_queue.put(("complete", {
+                "sent": sent,
+                "total": total_target,
+                "msg": f"🎉 完成！共赠送 {sent} 葫芦"
+            }))
+        except Exception as e:
+            log_queue.put(("error", {"msg": f"异常: {e}"}))
+        finally:
+            STATE["running"] = False
+            log_queue.put(("__done__", {}))
+
+    threading.Thread(target=run_thread, daemon=True).start()
+
+    def sse_generator():
+        while True:
+            try:
+                event, data = log_queue.get(timeout=0.5)
+                if event == "__done__":
+                    break
+                yield _sse(event, data)
+            except queue.Empty:
+                yield ": keepalive\n\n"
+                continue
+
+    return Response(sse_generator(), mimetype="text/event-stream")
 
 
 # ─── Status ───

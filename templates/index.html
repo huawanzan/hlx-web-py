@@ -138,6 +138,33 @@
         .user-info { font-size: 14px; color: var(--text2); }
         .user-info strong { color: var(--text); font-weight: 600; }
 
+        .key-display {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 12px; background: rgba(0,0,0,0.03);
+            border-radius: 8px; font-size: 13px;
+            margin-top: 8px; width: 100%;
+        }
+        .key-display label {
+            font-weight: 600; color: var(--text2); flex-shrink: 0;
+        }
+        .key-display input {
+            flex: 1; padding: 6px 10px; font-size: 12px;
+            font-family: 'Courier New', monospace; background: #fff;
+            border: 1px solid var(--border); border-radius: 6px;
+            color: var(--text);
+        }
+        .key-display button {
+            padding: 6px 12px; font-size: 12px; background: var(--accent);
+            color: #fff; border: none; border-radius: 6px; cursor: pointer;
+            font-weight: 600; transition: all .2s;
+        }
+        .key-display button:hover {
+            background: var(--accent2); transform: translateY(-1px);
+        }
+        .key-display button:active {
+            transform: translateY(0);
+        }
+
         .section-title {
             font-size: 13px; font-weight: 700; color: var(--text);
             margin: 14px 0 8px; padding-bottom: 6px;
@@ -305,10 +332,19 @@
         <div class="card">
             <!-- User bar -->
             <div class="user-bar">
-                <span class="user-info" id="userInfo"></span>
-                <div style="display:flex;gap:8px;">
-                    <button class="btn btn-sm btn-outline" onclick="doCheckIn()" id="btnCheckIn">📅 一键签到</button>
-                    <button class="btn btn-sm btn-outline" onclick="logout()">↩ 退出</button>
+                <div style="width: 100%;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                        <span class="user-info" id="userInfo"></span>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn btn-sm btn-outline" onclick="doCheckIn()" id="btnCheckIn">📅 一键签到</button>
+                            <button class="btn btn-sm btn-outline" onclick="logout()">↩ 退出</button>
+                        </div>
+                    </div>
+                    <div class="key-display">
+                        <label>🔑 Key:</label>
+                        <input type="text" id="userKey" readonly>
+                        <button onclick="copyKey()">📋 复制</button>
+                    </div>
                 </div>
             </div>
 
@@ -509,6 +545,7 @@ async function doLogin() {
             currentUser = {nick: d.nick, uid: d.uid, token: d.token};
             showPage('main');
             $('userInfo').innerHTML = `🦊 <strong>${esc(d.nick)}</strong> · UID ${d.uid}`;
+            $('userKey').value = d.token || '';
             loadPrefs();
             listImages();
             loadCategories();
@@ -528,6 +565,55 @@ async function doLogin() {
 document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && $('loginPage').style.display !== 'none') doLogin();
 });
+
+// Copy key to clipboard
+function copyKey() {
+    const keyInput = $('userKey');
+    const key = keyInput.value;
+
+    if (!key) {
+        alert('Key 为空');
+        return;
+    }
+
+    // 尝试使用现代 API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(key).then(() => {
+            showCopyFeedback();
+        }).catch(err => {
+            // 如果现代 API 失败，使用传统方法
+            fallbackCopyKey(keyInput);
+        });
+    } else {
+        // 不支持现代 API，使用传统方法
+        fallbackCopyKey(keyInput);
+    }
+}
+
+// 传统复制方法（兼容旧浏览器）
+function fallbackCopyKey(input) {
+    try {
+        input.select();
+        input.setSelectionRange(0, 99999); // For mobile devices
+        document.execCommand('copy');
+        showCopyFeedback();
+    } catch (err) {
+        alert('复制失败，请手动复制');
+    }
+}
+
+// 显示复制成功反馈
+function showCopyFeedback() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '✓ 已复制';
+    btn.style.background = 'var(--success)';
+
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.background = 'var(--accent)';
+    }, 2000);
+}
 
 function logout() {
     currentUser = null;
